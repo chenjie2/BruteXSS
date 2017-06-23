@@ -1,5 +1,7 @@
 ###备注
+
 非交互式，便于自动化，增加cookie支持
+
 #BruteXSS
 
 BruteXSS - Cross-Site Scripting BruteForcer
