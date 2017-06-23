@@ -6,7 +6,8 @@
 
 from string import whitespace
 import httplib
-import urllib
+import urllib 
+import urllib2
 import socket
 import urlparse
 import os
@@ -15,6 +16,7 @@ import time
 from colorama import init , Style, Back,Fore
 import mechanize
 import httplib
+from optparse import OptionParser
 init()
 banner = """                                                                                       
   ____             _        __  ______ ____  
@@ -36,11 +38,28 @@ banner = """
  provided for positive results.
 """
 def brutexss():
-	if os.name == 'nt':
-		os.system('cls')
+	# if os.name == 'nt':
+	# 	os.system('cls')
+	# else:
+	# 	os.system('clear')
+	# print banner
+	usage = "usage: %prog [options]"
+	parser = OptionParser(usage=usage)
+	parser.add_option("-u", "--url", dest="url", help="target URL")
+	parser.add_option("--post", dest="post", default=False, action="store_true",help="try a post request to target url")
+	parser.add_option("--data", dest="post_data", help="post data to use")
+	parser.add_option("--user-agent", dest="user_agent", help="provide an user agent")
+	parser.add_option("--cookie", dest="cookie", help="use a cookie to perform scans")
+
+	(options, args) = parser.parse_args()
+	if options.url is None: 
+		parser.print_help() 
+		exit()
+	if options.post == True: 
+		print("methon is Post")
 	else:
-		os.system('clear')
-	print banner
+		print("methon is GET")
+
 	def again():
 		inp = raw_input("[?] [E]xit or launch [A]gain? (e/a)").lower()
 		if inp == 'a':
@@ -110,7 +129,7 @@ def brutexss():
 			return("")
 		except(ValueError):
 			print(Style.BRIGHT+Fore.RED+"[!] Uh oh! No parameters in URL!"+Style.RESET_ALL)
-			again()
+			# again()
 	def complete(p,r,c,d):
 		print("[+] Bruteforce Completed.")
 		if c == 0:
@@ -121,12 +140,13 @@ def brutexss():
 			print("[+] %s Parameters are "+Style.BRIGHT+Fore.RED+"vulnerable"+Style.RESET_ALL+" to XSS.")%c
 		print("[+] Scan Result for %s:")%d
 		print bg(p,r)
-		again()
+		# again()
 	def GET():
 			try:
 				try:
 					grey = Style.DIM+Fore.WHITE
-					site = raw_input("[?] Enter URL:\n[?] > ") #Taking URL
+					# site = raw_input("[?] Enter URL:\n[?] > ") #Taking URL
+					site = options.url
 					if 'https://' in site:
 						pass
 					elif 'http://' in site:
@@ -144,18 +164,16 @@ def brutexss():
 					url = site
 					paraname = []
 					paravalue = []
-					wordlist = raw_input("[?] Enter location of Wordlist (Press Enter to use default wordlist.txt)\n[?] > ")
-					if len(wordlist) == 0:
-						wordlist = 'wordlist.txt'
-						print(grey+"[+] Using Default wordlist..."+Style.RESET_ALL)
-					else:
-						pass
+
+					wordlist = 'wordlist.txt'
+					print(grey+"[+] Using Default wordlist..."+Style.RESET_ALL)
+
 					payloads = []
 					wordlistimport(wordlist,payloads)
 					lop = str(len(payloads))
 					grey = Style.DIM+Fore.WHITE
 					print(Style.DIM+Fore.WHITE+"[+] "+lop+" Payloads loaded..."+Style.RESET_ALL)
-					print("[+] Bruteforce start:") 
+					print("[+] Bruteforce start:")
 					o = urlparse.urlparse(site)
 					parameters = urlparse.parse_qs(o.query,keep_blank_values=True)
 					path = urlparse.urlparse(site).scheme+"://"+urlparse.urlparse(site).netloc+urlparse.urlparse(site).path
@@ -181,8 +199,17 @@ def brutexss():
 								progress = progress + 1
 								enc = urllib.quote_plus(x)
 								data = path+"?"+pn+"="+pv+enc
-								page = urllib.urlopen(data)
-								sourcecode = page.read()
+								u = urllib.URLopener()
+								u.addheaders = []
+								if options.cookie is not None:
+									u.addheader('Cookie',options.cookie)
+								if options.user_agent is not None:
+									u.addheader('User-Agent',options.user_agent)
+								f = u.open(data)
+								sourcecode = f.read()
+								f.close()
+								# page = urllib.urlopen(data)
+								# sourcecode = page.read()
 								if x in sourcecode:
 									print(Style.BRIGHT+Fore.RED+"\n[!]"+" XSS Vulnerability Found! \n"+Fore.RED+Style.BRIGHT+"[!]"+" Parameter:\t%s\n"+Fore.RED+Style.BRIGHT+"[!]"+" Payload:\t%s"+Style.RESET_ALL)%(pn,x)
 									fresult.append("  Vulnerable  ")
@@ -209,10 +236,14 @@ def brutexss():
 			try:
 				try:
 					br = mechanize.Browser()
-					br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11)Gecko/20071127 Firefox/2.0.0.11')]
+					if options.cookie is not None:
+						br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11)Gecko/20071127 Firefox/2.0.0.11'),('Cookie',options.cookie)]
+					else:
+						br.addheaders = [('User-agent', 'Mozilla/5.0 (Windows; U; Windows NT 5.1; it; rv:1.8.1.11)Gecko/20071127 Firefox/2.0.0.11')]
 					br.set_handle_robots(False)
 					br.set_handle_refresh(False)
-					site = raw_input("[?] Enter URL:\n[?] > ") #Taking URL
+					# site = raw_input("[?] Enter URL:\n[?] > ") #Taking URL
+					site = options.url
 					if 'https://' in site:
 						pass
 					elif 'http://' in site:
@@ -229,13 +260,9 @@ def brutexss():
 					print("[+] "+Fore.GREEN+domain+" is available! Good!"+Style.RESET_ALL)
 					path = urlparse.urlparse(site).scheme+"://"+urlparse.urlparse(site).netloc+urlparse.urlparse(site).path
 					url = site
-					param = str(raw_input("[?] Enter post data: > "))
-					wordlist = raw_input("[?] Enter location of Wordlist (Press Enter to use default wordlist.txt)\n[?] > ")
-					if len(wordlist) == 0:
-						wordlist = 'wordlist.txt'
-						print("[+] Using Default wordlist...")
-					else:
-						pass
+					# param = str(raw_input("[?] Enter post data: > "))
+					param = options.post_data
+					wordlist = 'wordlist.txt'
 					payloads = []
 					wordlistimport(wordlist,payloads)
 					lop = str(len(payloads))
@@ -313,14 +340,14 @@ def brutexss():
 		except (mechanize.HTTPError,mechanize.URLError) as e:
 			print(Style.BRIGHT+Fore.RED+"\n[!] HTTP ERROR! %s %s"+Style.RESET_ALL)%(e.code,e.reason)
 	try:
-		methodselect = raw_input("[?] Select method: [G]ET or [P]OST (G/P): ").lower()
-		if methodselect == 'g':
+		# methodselect = raw_input("[?] Select method: [G]ET or [P]OST (G/P): ").lower()
+		if options.post == False:
 			GET()
-		elif methodselect == 'p':
-			POST()
 		else:
-			print("[!] Incorrect method selected.")
-			again()
+			if options.post_data is None:
+				print("\nPost must has post_data!")
+				exit()
+			POST()
 	except(KeyboardInterrupt) as Exit:
 		print("\nExit...")
 
